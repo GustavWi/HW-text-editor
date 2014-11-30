@@ -1,0 +1,20 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.ALL;
+package types_vhdl is
+  subtype vec2 is std_logic_vector(1 downto 0);
+  subtype vec3 is std_logic_vector(2 downto 0);
+  subtype vec4 is std_logic_vector(3 downto 0);
+  subtype vec5 is std_logic_vector(4 downto 0);
+  subtype vec6 is std_logic_vector(5 downto 0);
+  subtype vec7 is std_logic_vector(6 downto 0);
+  subtype vec8 is std_logic_vector(7 downto 0);
+  subtype vec9 is std_logic_vector(8 downto 0); 
+  subtype vec10 is std_logic_vector(9 downto 0);
+  subtype vec11 is std_logic_vector(10 downto 0);  
+  subtype vec12 is std_logic_vector(11 downto 0);
+  subtype vec13 is std_logic_vector(12 downto 0); 
+  subtype vec14 is std_logic_vector(13 downto 0); 
+  subtype vec15 is std_logic_vector(14 downto 0); 
+  subtype vec16 is std_logic_vector(15 downto 0);   
+end types_vhdl;
