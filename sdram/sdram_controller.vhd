@@ -124,47 +124,50 @@ architecture RTL of sdram_controller is
     end if;
   end process;
   
-  process(exe_state, INI_DONE,command_delay,refresh_counter, next_state)
+  process(rst, int_CLK)
     begin
-    if INI_DONE = '0' or refresh_counter > refresh_intervall then
+    if rst = '0' then
       int_ready_for_cmd <= '0';
-    else 
-      case exe_state is
-        when write_state => int_ready_for_cmd <= '1';
-        when cmd_delay_state =>
-          if command_delay(1) = '0' and next_state = idle_state then
-            int_ready_for_cmd <= '1';
-          else
-            int_ready_for_cmd <= '0';
-          end if;
-        when idle_state => int_ready_for_cmd <= '1';
-        when others => int_ready_for_cmd <= '0';
-      end case;
+    elsif rising_edge(int_CLK) then
+      if INI_DONE = '0' or refresh_counter > refresh_intervall then
+        int_ready_for_cmd <= '0';
+      else       
+        case exe_state is
+          when write_state => int_ready_for_cmd <= '1';
+          when cmd_delay_state =>
+            if command_delay(1) = '0' and next_state = idle_state then
+              int_ready_for_cmd <= '1';
+            else
+              int_ready_for_cmd <= '0';
+            end if;
+          when idle_state => int_ready_for_cmd <= '1';
+          when others => int_ready_for_cmd <= '0';
+        end case;
+      end if;
     end if;
   end process;
   
-  process(read_8_count)
+  process(rst, INI_DONE,int_CLK)
     variable tmp : vec3;
     begin
-    tmp := (others => '0');
-    for I in read_8_count'high downto 0 loop
-      if read_8_count(I) = '0' then
-        tmp := std_logic_vector(unsigned(tmp) + 1);
-      end if;
-    end loop;
-    address_data_out <= int_full_address(int_full_address'high downto tmp'high+1) & tmp;
-    -- if exe_state = read_state then
-      -- address_data_out <= int_full_address(int_full_address'high downto tmp'high+1) & tmp;
-    -- else
-      -- address_data_out <= (others => '0');
-    -- end if;
+    if rst = '0' or INI_DONE = '0' then
+      address_data_out <= (others => '0');
+    elsif rising_edge(int_CLK) then
+      tmp := (others => '0');
+      for I in read_8_count'high downto 0 loop
+        if read_8_count(I) = '0' then
+          tmp := std_logic_vector(unsigned(tmp) + 1);
+        end if;
+      end loop;
+      address_data_out <= int_full_address(int_full_address'high downto tmp'high+1) & tmp;    
+    end if;
   end process;
   
-  process(exe_state, rst, next_state,INI_DONE, SET_MODE_INI, PRE_ALL_INI)
+  process(rst, int_CLK)
     begin
     if rst = '0' or INI_DONE = '0' then
       int_Address <= (others => '0');
-    else
+    elsif rising_edge(int_CLK) then
       case exe_state is
         when row_act =>         int_Address <= set_address_usr;
         when read_state =>      int_Address <= set_address_usr;
@@ -185,15 +188,15 @@ architecture RTL of sdram_controller is
             int_Address <= (others => '0');
           end if;
         when others =>          int_Address <= (others =>'0');
-      end case;
+      end case;      
     end if;
-  end process;
+  end process;  
     
-  process(exe_state, rst)
+  process(rst, int_CLK)
     begin
-    if rst = '0' then
+    if rst = '0' or INI_DONE = '0' then
       banks_activated <= (others => '0');
-    else
+    elsif rising_edge(int_CLK) then
       case exe_state is
         when row_act => banks_activated <= banks_activated or bank_pin(select_bank); 
         when precharge_state => 
@@ -236,20 +239,24 @@ architecture RTL of sdram_controller is
     end if;
   end process;
   
-  process(exe_state, rst)
-    begin      
-    case exe_state is
-      when idle_state =>      int_CMD <= t_NOP;
-      when precharge_state => int_CMD <= t_PRE;
-      when auto_refresh =>    int_CMD <= t_REF;
-      when set_mode =>        int_CMD <= t_MRS;
-      when row_act =>         int_CMD <= t_ACT;
-      when read_state =>      int_CMD <= t_READ;
-      when write_state =>     int_CMD <= t_WRITE;
-      when cmd_delay_state => int_CMD <= t_NOP;
-      when cas_delay_state => int_CMD <= t_NOP;
-      when others =>          int_CMD <= t_NOP;
+  process(rst, int_CLK)
+    begin
+    if rst = '0' or INI_DONE = '0' then
+      int_CMD <= t_NOP;
+    elsif rising_edge(int_CLK) then
+      case exe_state is
+        when idle_state =>      int_CMD <= t_NOP;
+        when precharge_state => int_CMD <= t_PRE;
+        when auto_refresh =>    int_CMD <= t_REF;
+        when set_mode =>        int_CMD <= t_MRS;
+        when row_act =>         int_CMD <= t_ACT;
+        when read_state =>      int_CMD <= t_READ;
+        when write_state =>     int_CMD <= t_WRITE;
+        when cmd_delay_state => int_CMD <= t_NOP;
+        when cas_delay_state => int_CMD <= t_NOP;
+        when others =>          int_CMD <= t_NOP;
     end case;
+    end if;
   end process;
   
   process(exe_state)
