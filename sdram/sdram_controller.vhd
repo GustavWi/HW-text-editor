@@ -99,7 +99,6 @@ architecture RTL of sdram_controller is
   output_en <= int_output_en;
   -------------------------------------------------------------------------------
   -------------------------------------------------------------------------------
-  DQ_set <= '0' when exe_state = write_state else '1';
   int_DQ_out <= write_data;
   int_DQM <= "00" when (exe_state = read_state
   or exe_state = write_state) else "11";
@@ -111,9 +110,23 @@ architecture RTL of sdram_controller is
   or exe_state = read_state
   or exe_state = write_state) else "00";      
   
-  process(rst, int_CLK)
+  ---DQ in or out-----------------------
+  process(rst,int_CLK, INI_DONE)
     begin
-    if rst = '0' then
+    if rst = '0'  or INI_DONE = '0' then
+      DQ_set <= '1';
+    elsif rising_edge(int_CLK) then
+      if exe_state = write_state then
+        DQ_set <= '0';
+      else
+        DQ_set <= '1';
+      end if;
+    end if;
+
+  --CAS DELAY---------------------------
+  process(rst, int_CLK, INI_DONE)
+    begin
+    if rst = '0'  or INI_DONE = '0' then
       cas_delay <= (others => '1');
     elsif rising_edge(int_CLK) then
       if exe_state = cas_delay_state then
@@ -124,30 +137,22 @@ architecture RTL of sdram_controller is
     end if;
   end process;
   
-  process(rst, int_CLK)
+  --ready for command-------------------
+  process(rst, int_CLK, INI_DONE)
     begin
-    if rst = '0' then
+    if rst = '0'  or INI_DONE = '0' then
       int_ready_for_cmd <= '0';
     elsif rising_edge(int_CLK) then
-      if INI_DONE = '0' or refresh_counter > refresh_intervall then
+      if refresh_counter > refresh_intervall then
         int_ready_for_cmd <= '0';
-      else       
-        case exe_state is
-          when write_state => int_ready_for_cmd <= '1';
-          when cmd_delay_state =>
-            if command_delay(1) = '0' and next_state = idle_state then
-              int_ready_for_cmd <= '1';
-            else
-              int_ready_for_cmd <= '0';
-            end if;
-          when idle_state => int_ready_for_cmd <= '1';
-          when others => int_ready_for_cmd <= '0';
-        end case;
+      elsif exe_state = idle_state then       
+        int_ready_for_cmd <= '1';
       end if;
     end if;
   end process;
   
-  process(rst, INI_DONE,int_CLK)
+  --Address out to reader---------------
+  process(rst, int_CLK, INI_DONE)
     variable tmp : vec3;
     begin
     if rst = '0' or INI_DONE = '0' then
@@ -163,7 +168,8 @@ architecture RTL of sdram_controller is
     end if;
   end process;
   
-  process(rst, int_CLK)
+  --set Address to sdram----------------
+  process(rst, int_CLK, INI_DONE)
     begin
     if rst = '0' or INI_DONE = '0' then
       int_Address <= (others => '0');
@@ -191,20 +197,17 @@ architecture RTL of sdram_controller is
       end case;      
     end if;
   end process;  
-    
-  process(rst, int_CLK)
+  
+  --Store which banks are open----------
+  process(rst, int_CLK, INI_DONE)
     begin
     if rst = '0' or INI_DONE = '0' then
       banks_activated <= (others => '0');
     elsif rising_edge(int_CLK) then
       case exe_state is
         when row_act => banks_activated <= banks_activated or bank_pin(select_bank); 
-        when precharge_state => 
-          if next_state = auto_refresh then
-            banks_activated <= (others => '0');
-          else
-            banks_activated <= banks_activated xor bank_pin(select_bank);
-          end if;
+        when precharge_state => banks_activated <= banks_activated xor bank_pin(select_bank);
+        when auto_refresh => banks_activated <= (others => '0');
         when others => banks_activated <= banks_activated;
       end case;
     end if;
@@ -213,7 +216,8 @@ architecture RTL of sdram_controller is
   --New read output
   int_output_en <= output_delay(0);
   
-  process(int_CLK,rst, INI_DONE)
+  --refresh counter for auto refresh----
+  process(rst, int_CLK, INI_DONE)
   begin
     if rst = '0' or INI_DONE = '0' then
       refresh_counter <= 0;
@@ -226,9 +230,10 @@ architecture RTL of sdram_controller is
     end if;
   end process;
   
-  process(int_CLK, rst)
+  --output delay from read cmd to data--
+  process(rst, int_CLK, INI_DONE)
   begin
-    if rst = '0' then
+    if rst = '0' or INI_DONE = '0' then
       output_delay <= (others=>'0');
     elsif rising_edge(int_CLK) then
       if exe_state = read_state then
@@ -239,7 +244,8 @@ architecture RTL of sdram_controller is
     end if;
   end process;
   
-  process(rst, int_CLK)
+  --command to sdram--------------------
+  process(rst, int_CLK, INI_DONE)
     begin
     if rst = '0' or INI_DONE = '0' then
       int_CMD <= t_NOP;
@@ -259,20 +265,26 @@ architecture RTL of sdram_controller is
     end if;
   end process;
   
-  process(exe_state)
+  --store open rows---------------------
+  process(rst, int_CLK)
     begin
-      if exe_state = row_act then
-        bank_active_rows(get_bank_index(select_bank)) <= get_row_address(int_full_address);
+      if rst = '0' or INI_DONE = '0' then
+        bank_active_rows(others =>(others=>'0'));
+      elsif rising_edge(int_CLK) then
+        if exe_state = row_act then
+          bank_active_rows(get_bank_index(select_bank)) <= get_row_address(int_full_address);
+        end if;
       end if;
   end process;
   
+  --store write data and address--------
   process(int_CLK, rst)
     begin
     if rst = '0' then
       int_full_address <= (others => '0');
       write_data <= (others => '0');
     elsif rising_edge(int_CLK) then
-      if exe_state = idle_state or exe_state = write_state or next_state = idle_state then
+      if exe_state = idle_state then
         if read_en = '1' then
           int_full_address <= get_8_aligned(full_address);
         else
@@ -290,7 +302,8 @@ architecture RTL of sdram_controller is
   --write_data <= data_in when exe_state = idle_state else write_data;
   read_cmd <= read_en when int_ready_for_cmd = '1' else read_cmd;
   cmd_ack <= '0' when exe_state = idle_state else '1';
-  --cmd delay
+  
+  --cmd delay of sdram------------------
   process(int_CLK, rst)
     begin
     if rst = '0' then 
@@ -309,6 +322,7 @@ architecture RTL of sdram_controller is
     end if;
   end process;
   
+  --Count read outputs------------------
   process(int_CLK, rst)
     begin
     if rst = '1' then
@@ -318,11 +332,12 @@ architecture RTL of sdram_controller is
         when read_state =>      read_8_count <= (others => '1');
         when cas_delay_state => read_8_count <= (others => '1');
         when cmd_delay_state => read_8_count <= right_shift(read_8_count);
-        when others =>      read_8_count <= (others => '1');
+        when others =>          read_8_count <= (others => '1');
       end case;
     end if;
   end process;
   
+  --set exe_state and next_state--------
   process(int_CLK, rst, INI_DONE)
     begin
     if (rst = '0' or INI_DONE = '0') then
@@ -351,13 +366,6 @@ architecture RTL of sdram_controller is
         when read_state =>
           exe_state <= cas_delay_state;
           next_state <= idle_state;
-          -- if read_8_count(1) = '1' then 
-            -- exe_state <= read_state;
-            -- next_state <= read_state;
-          -- else -- only one read left
-            -- exe_state <= cmd_delay_state;
-            -- next_state <= idle_state;
-          -- end if;
         when cas_delay_state =>
           if cas_delay(2) = '0' then
             exe_state <= cmd_delay_state;
@@ -366,23 +374,12 @@ architecture RTL of sdram_controller is
           end if;
           next_state <= idle_state;
         when write_state =>
-          next_instruction(refresh_counter,
-                          read_en, write_en,
-                          full_address, banks_activated,
-                          bank_active_rows, 
-                          exe_state, next_state);
+          exe_state <= idle_state;
+          next_state <= idle_state;
         when cmd_delay_state =>
           if command_delay(1) = '0' then -- next clock cycle the sdram will be ready for a new cmd
-            if next_state = idle_state then
-              next_instruction(refresh_counter,
-                read_en, write_en,
-                full_address, banks_activated,
-                bank_active_rows,
-                exe_state, next_state);
-            else
-              exe_state <= next_state;
-              next_state <= idle_state;
-            end if;
+            exe_state <= next_state;
+            next_state <= idle_state;
           else        
             exe_state <= exe_state;
             next_state <= next_state;
