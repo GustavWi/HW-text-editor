@@ -367,7 +367,7 @@ architecture RTL of sdram_controller is
           exe_state <= cas_delay_state;
           next_state <= idle_state;
         when cas_delay_state =>
-          if cas_delay(2) = '0' then
+          if cas_delay(1) = '0' then
             exe_state <= cmd_delay_state;
           else
             exe_state <= cas_delay_state;

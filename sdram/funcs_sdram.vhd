@@ -4,16 +4,6 @@ use ieee.numeric_std.ALL;
 use work.sdram_params.ALL;
 use work.types_vhdl.ALL;
 package funcs_sdram is
-  -- constant ASIZE 		: integer := 25;
-  -- constant DSIZE 		: integer := 16;
-  -- constant ROWSIZE 	: integer := 13;
-  -- constant COLSIZE 	: integer := 10;
-  -- constant BANKSIZE 	: integer := 2;
-  -- constant ROWSTART 	: integer := 10;         -- Starting position of the row address within ADDR   
-  -- constant COLSTART 	: integer := 0;         -- Starting position of the column address within ADDR
-  -- constant BANKSTART 	: integer := 23;		-- Starting position of the bank address within ADDR
-  -- constant NUM_STATES : integer := 15;
-  -- constant A10 : integer := 10;
   
   function get_row_address(full_address : in std_logic_vector(ASIZE-1 downto 0))
     return std_logic_vector;
