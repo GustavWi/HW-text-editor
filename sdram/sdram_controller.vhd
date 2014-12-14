@@ -175,9 +175,9 @@ architecture RTL of sdram_controller is
       int_Address <= (others => '0');
     elsif rising_edge(int_CLK) then
       case exe_state is
-        when row_act =>         int_Address <= set_address_usr;
-        when read_state =>      int_Address <= set_address_usr;
-        when write_state =>     int_Address <= set_address_usr;
+        when row_act =>         int_Address <= get_row_address(int_full_address);
+        when read_state =>      int_Address <= get_column(int_full_address);
+        when write_state =>     int_Address <= get_column(int_full_address);
         when set_mode =>        int_Address <= exe_mode;
         when precharge_state =>
           if next_state = auto_refresh then
@@ -186,9 +186,9 @@ architecture RTL of sdram_controller is
             int_Address <= (others =>'0');
           end if;
         when idle_state =>
-          if SET_MODE_INI = '1' then
+          if timer_init = t_WAIT_INIT + t_EXTRA_INIT + 180 then
             int_Address <= exe_mode;
-          elsif PRE_ALL_INI = '1' then
+          elsif timer_init = t_WAIT_INIT + t_EXTRA_INIT then
             int_Address <= (others => '1');
           else
             int_Address <= (others => '0');
@@ -296,9 +296,9 @@ architecture RTL of sdram_controller is
   end process;
  
   select_bank <= get_bank(int_full_address); --when exe_state = idle_state else select_bank;
-  set_address_usr <= get_row_address(int_full_address) when exe_state = row_act else
-  set_column_def(int_full_address) when exe_state = read_state or exe_state = write_state else
-  (others => '0');
+  -- set_address_usr <= get_row_address(int_full_address) when exe_state = row_act else
+  -- set_column_def(int_full_address) when exe_state = read_state or exe_state = write_state else
+  -- (others => '0');
   --write_data <= data_in when exe_state = idle_state else write_data;
   read_cmd <= read_en when int_ready_for_cmd = '1' else read_cmd;
   cmd_ack <= '0' when exe_state = idle_state else '1';

@@ -15,7 +15,7 @@ package funcs_sdram is
     return integer;
   function bank_pin(bank_bin : in std_logic_vector(BANKSIZE-1 downto 0))
     return std_logic_vector;
-  function set_column_def(full_address : in std_logic_vector(ASIZE-1 downto 0))
+  function get_column(full_address : in std_logic_vector(ASIZE-1 downto 0))
     return std_logic_vector;
   function get_8_aligned(full_address : in std_logic_vector(ASIZE-1 downto 0))
     return std_logic_vector;
@@ -66,14 +66,14 @@ package body funcs_sdram is
     end case;
   end bank_pin;
   
-  function set_column_def(full_address : in std_logic_vector(ASIZE-1 downto 0))
+  function get_column(full_address : in std_logic_vector(ASIZE-1 downto 0))
     return std_logic_vector is
   begin
     -- address_out(A10-1 downto 0) <= full_address(COLSIZE + COLSTART -2 downto COLSTART);
     -- address_out(A10) <= '0';
     -- address_out(COLSIZE downto A10+1) <= full_address(COLSIZE + COLSTART -1);
     return "000" & full_address(COLSIZE + COLSTART -1 downto COLSTART);
-  end set_column_def;
+  end get_column;
   
   function get_8_aligned(full_address : in std_logic_vector(ASIZE-1 downto 0))
     return std_logic_vector is
