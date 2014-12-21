@@ -122,7 +122,7 @@ architecture RTL of sdram_controller is
         DQ_set <= '1';
       end if;
     end if;
-  end process;
+
   --CAS DELAY---------------------------
   process(rst, int_CLK, INI_DONE)
     begin
@@ -269,7 +269,7 @@ architecture RTL of sdram_controller is
   process(rst, int_CLK)
     begin
       if rst = '0' or INI_DONE = '0' then
-        bank_active_rows <= (others =>(others=>'0'));
+        bank_active_rows(others =>(others=>'0'));
       elsif rising_edge(int_CLK) then
         if exe_state = row_act then
           bank_active_rows(get_bank_index(select_bank)) <= get_row_address(int_full_address);
