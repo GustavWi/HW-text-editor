@@ -301,7 +301,6 @@ architecture RTL of sdram_controller is
   -- (others => '0');
   --write_data <= data_in when exe_state = idle_state else write_data;
   read_cmd <= read_en when int_ready_for_cmd = '1' else read_cmd;
-  cmd_ack <= '0' when exe_state = idle_state else '1';
   
   --cmd delay of sdram------------------
   process(int_CLK, rst)
@@ -343,14 +342,35 @@ architecture RTL of sdram_controller is
     if (rst = '0' or INI_DONE = '0') then
       exe_state <= idle_state;
       next_state <= idle_state;
+      cmd_ack <= '0';
     elsif rising_edge(int_CLK) then
       case exe_state is
         when idle_state => --load in next cmd
-          next_instruction(refresh_counter,
-                          read_en, write_en,
-                          full_address, banks_activated,
-                          bank_active_rows,
-                          exe_state, next_state);    
+          -- next_instruction(refresh_counter,
+                          -- read_en, write_en,
+                          -- full_address, banks_activated,
+                          -- bank_active_rows,
+                          -- exe_state, next_state);
+          if refresh_counter > refresh_intervall then
+            exe_state <= precharge_state;
+            next_state <= auto_refresh;
+            cmd_ack <= '0';
+          elsif(read_en = '1' or write_en = '1') then
+            if banks_activated(get_bank_index(get_bank(full_address))) = '1' then
+              exe_state <= precharge_state;
+              next_state <= row_act;
+            else
+              exe_state <= row_act;
+              if read_en = '1' then
+                next_state <= read_state;
+              else
+                next_state <= write_state;
+              end if;
+            end if;
+            cmd_ack <= '1';
+          else
+            cmd_ack <= '0';
+          end if;
         when precharge_state =>
           exe_state <= cmd_delay_state;
           next_state <= next_state;
@@ -362,7 +382,11 @@ architecture RTL of sdram_controller is
           next_state <= idle_state;
         when row_act =>
           exe_state <= cmd_delay_state;
-          next_state <= next_state;
+          if read_cmd = '1' then
+            next_state <= read_state;
+          else
+            next_state <= write_state;
+          end if;
         when read_state =>
           exe_state <= cas_delay_state;
           next_state <= idle_state;

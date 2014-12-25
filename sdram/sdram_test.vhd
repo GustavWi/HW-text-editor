@@ -51,7 +51,8 @@ architecture RTL of sdram_test is
   signal int_data1_1 : vec8 := (others => '0');
   signal int_data2_0 : vec8 := (others => '0');
   signal int_data2_1 : vec8 := (others => '0');  
-   
+
+  signal sent_cmd : std_logic := '0';
   
   begin
   data_0 <= int_data0_0(3 downto 0);
@@ -66,7 +67,14 @@ architecture RTL of sdram_test is
   
   process(rst, int_clk)
     begin
-    if rising_edge(int_clk) then
+	 if rst = '0' then
+	  int_data0_0 <= (others => '0');
+		int_data0_1 <= (others => '0');
+		int_data1_0 <= (others => '0');
+		int_data1_1 <= (others => '0');
+		int_data2_0 <= (others => '0');
+		int_data2_1 <= (others => '0');
+    elsif rising_edge(int_clk) then
       if output_en = '1' then
         case address_in is
           when addr0 =>
@@ -83,70 +91,67 @@ architecture RTL of sdram_test is
       end if;
     end if;
   end process;
-    
+  
+  
   process(rst, int_clk)
     begin
-    if rising_edge(int_clk) then
-      if ready_for_cmd = '1' then
-        case state is
-          when 0 =>
-            full_address <= addr0;
+    if rst = '0' then
+      state <= 0;
+    elsif rising_edge(int_clk) then
+      case state is
+        when 0 =>
+          read_en <= '0';
+          full_address <= addr0;
+          data_to_write <= data0;
+          if ready_for_cmd = '1' then
             write_en <= '1';
-            read_en <= '0';
-            data_to_write <= data0;
-          when 1 =>
-            full_address <= addr1;
-            write_en <= '1';
-            read_en <= '0';
-            data_to_write <= data1;
-          when 2 =>
-            full_address <= addr2;
-            write_en <= '1';
-            read_en <= '0';
-            data_to_write <= data2;
-          when 3 =>
-            full_address <= addr3;
-            write_en <= '1';
-            read_en <= '0';
-            data_to_write <= data3;
-          when 4 => --read
-            full_address <= addr0;
+            state <= state +1;
+          else
             write_en <= '0';
-            read_en <= '1';
-            data_to_write <= (others => '0');
-          when 5 => --read
-            full_address <= addr1;
-            write_en <= '0';
-            read_en <= '1';
-            data_to_write <= (others => '0');
-          when 6 => --read
-            full_address <= addr2;
-            write_en <= '0';
-            read_en <= '1';
-            data_to_write <= (others => '0');
-          when 7 => --read
-            full_address <= addr3;
-            write_en <= '0';
-            read_en <= '1';
-            data_to_write <= (others => '0');
-          when others =>
             state <= state;
-            full_address <= (others => '0');
+          end if;
+        when 1 =>
+          if cmd_ack = '1' then
+            state <= state +1;
+          else
+            state <= state;
+          end if;
+          full_address <= (others => '0');
+          data_to_write <= (others => '0');
+          write_en <= '0';
+          read_en <= '0';
+        when 2 =>
+          full_address <= addr0;
+          data_to_write <= (Others => '0');
+          write_en <= '0';
+          if ready_for_cmd = '1' then
+            read_en <= '1';
+            state <= state + 1;
+          else
             read_en <= '0';
-            write_en <= '0';
-            data_to_write <= (others => '0');
-        end case;
-        if state < 10 then
-          state <= state + 1;
-        end if;
-      else
-        state <= state;
-        full_address <= (others => '0');
-        read_en <= '0';
-        write_en <= '0';
-        data_to_write <= (others => '0');
-      end if;
+            state <= state +1;
+          end if;
+        when others =>
+          full_address <= (others => '0');
+          data_to_write <= (others => '0');
+          write_en <= '0';
+          read_en <= '0';
+      end case;
     end if;
   end process;
   
 end RTL;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
