@@ -145,7 +145,7 @@ architecture RTL of sdram_controller is
   process(int_CLK, rst, INI_DONE)
     begin
     if rst = '0' or INI_DONE = '0' then
-      int_DQM <= "11"
+      int_DQM <= "11";
     elsif rising_edge(int_CLK) then
       if exe_state = write_state or exe_state = read_state then -- TODO Fix for readburst
         int_DQM <= "00";
@@ -310,7 +310,7 @@ architecture RTL of sdram_controller is
         when cmd_delay_state => int_CMD <= t_NOP;
         when cas_delay_state => int_CMD <= t_NOP;
         when others =>          int_CMD <= t_NOP;
-    end case;
+      end case;
     end if;
   end process;
   
@@ -374,9 +374,10 @@ architecture RTL of sdram_controller is
   --Count read outputs------------------
   process(int_CLK, rst)
     begin
-    if rst = '1' then
+    if rst = '0' then
       read_8_count <= (others => '1');
     elsif rising_edge(int_CLK) then
+    
       case exe_state is
         when read_state =>      read_8_count <= (others => '1');
         when cas_delay_state => read_8_count <= (others => '1');
@@ -453,7 +454,7 @@ architecture RTL of sdram_controller is
           next_state <= idle_state;
         when cmd_delay_state =>
           cmd_ack <= '0';
-          if command_delay(1) = '0' then -- next clock cycle the sdram will be ready for a new cmd
+          if command_delay(2) = '0' then -- next clock cycle the sdram will be ready for a new cmd
             exe_state <= next_state;
             next_state <= idle_state;
           else        

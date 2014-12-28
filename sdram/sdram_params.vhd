@@ -66,7 +66,7 @@ package sdram_params is
   ----------Internal control variables--------------
   --------------------Cycles-------------------------
   constant CAS_LATENCY : vec10 := "0000000111"; --0111
-  constant PRECHARGE_LATENCY : vec10 := "0000001111";
+  constant PRECHARGE_LATENCY : vec10 := "0000000111";
   constant SET_MODE_DELAY : vec10 := "0000000111";
   constant AUTO_REFRESH_DELAY : vec10 := "1111111111";
   constant ACT_LATENCY : vec10 := "0000000111"; --0111
