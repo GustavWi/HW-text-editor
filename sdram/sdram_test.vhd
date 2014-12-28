@@ -34,7 +34,7 @@ end sdram_test;
 architecture RTL of sdram_test is
   signal int_clk : std_logic;
   signal timer : integer range 0 to 100;
-  signal state : integer range 0 to 10 := 0;
+  signal state : vec4 := (others => '0');
   constant address : std_logic_vector(22 downto 0) := (others => '0');
   constant data0 : vec_D := X"ABCD";
   constant data1 : vec_D := X"DEAD";
@@ -76,19 +76,15 @@ architecture RTL of sdram_test is
 		int_data2_1 <= (others => '0');
     elsif rising_edge(int_clk) then
       if output_en = '1' then
-        case address_in is
-          when addr0 =>
-            int_data0_0 <= data_in(7 downto 0);
-            int_data0_1 <= data_in(15 downto 8);
-          when addr1 =>
-            int_data1_0 <= data_in(7 downto 0);
-            int_data1_1 <= data_in(15 downto 8);
-          when addr2 =>
-            int_data2_0 <= data_in(7 downto 0);
-            int_data2_1 <= data_in(15 downto 8);      
-          when others => 
-        end case;
+        if address_in = addr3 and int_data1_0 = X"00" then
+          int_data0_0 <= data_in(7 downto 0);
+          int_data0_1 <= data_in(15 downto 8);
+          int_data1_0 <= std_logic_vector(unsigned(int_data1_0) + 1);
+        end if;
+        --int_data1_0 <= address_in(24 downto 21) & address_in(3 downto 0);
+        --int_data1_0 <= "0000" & state;
       end if;
+      --int_data1_0 <= address_in(24 downto 21) & address_in(3 downto 0);
     end if;
   end process;
   
@@ -96,23 +92,23 @@ architecture RTL of sdram_test is
   process(rst, int_clk)
     begin
     if rst = '0' then
-      state <= 0;
+      state <= (others => '0');
     elsif rising_edge(int_clk) then
       case state is
-        when 0 =>
+        when "0000" =>
           read_en <= '0';
-          full_address <= addr0;
+          full_address <= addr3;
           data_to_write <= data0;
           if ready_for_cmd = '1' then
             write_en <= '1';
-            state <= state +1;
+            state <= "0001";
           else
             write_en <= '0';
             state <= state;
           end if;
-        when 1 =>
+        when "0001" =>
           if cmd_ack = '1' then
-            state <= state +1;
+            state <= "0010";
           else
             state <= state;
           end if;
@@ -120,22 +116,23 @@ architecture RTL of sdram_test is
           data_to_write <= (others => '0');
           write_en <= '0';
           read_en <= '0';
-        when 2 =>
-          full_address <= addr0;
-          data_to_write <= (Others => '0');
+        when "0010" =>
+          full_address <= addr3;
+          data_to_write <= (others => '0');
           write_en <= '0';
           if ready_for_cmd = '1' then
             read_en <= '1';
-            state <= state + 1;
+            state <= "0011";
           else
             read_en <= '0';
-            state <= state +1;
+            state <= state;
           end if;
         when others =>
           full_address <= (others => '0');
           data_to_write <= (others => '0');
           write_en <= '0';
           read_en <= '0';
+          state <= state;
       end case;
     end if;
   end process;

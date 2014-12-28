@@ -36,7 +36,7 @@ package sdram_params is
   constant t_SETUP_INIT : integer := 300;
 
   -----------------EXECUTION-------------------------
-  constant output_sequence : vec12 := "011111111000"; --read output
+  constant output_sequence : vec12 := "001111111100"; --read output
   constant refresh_intervall : integer := 1500; --(64ms/200Mhz)*8192    
   ----------------------------------------------------
   ----------------Execution states-------------------

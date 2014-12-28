@@ -21,11 +21,6 @@ package funcs_sdram is
     return std_logic_vector;
   function right_shift(register_t : in std_logic_vector)
     return std_logic_vector;
-  procedure next_instruction (signal refresh_counter : in  integer;
-                            signal read_en, write_en : in std_logic;
-                            signal full_address, banks_activated : in std_logic_vector;
-                            signal bank_active_rows : in rows;
-                            signal exe_state, next_state : out integer);
 end funcs_sdram;
 
 package body funcs_sdram is
@@ -88,44 +83,6 @@ package body funcs_sdram is
   begin
     return '0' & register_t(register_t'high downto register_t'low +1); 
   end right_shift;  
-  
-
-procedure next_instruction (signal refresh_counter : in  integer range 0 to 1600;
-                            signal read_en, write_en : in std_logic;
-                            signal full_address, banks_activated : in std_logic_vector;
-                            signal bank_active_rows : in rows;
-                            signal exe_state, next_state : out integer range 0 to EXE_STATES_MAX) is
-  begin
-  if refresh_counter > refresh_intervall then
-    exe_state <= precharge_state;
-    next_state <= auto_refresh;
-  elsif (read_en = '1' or write_en = '1') then
-    if banks_activated(get_bank_index(get_bank(full_address))) = '1' then
-      if bank_active_rows(get_bank_index(get_bank(full_address))) = get_row_address(full_address) then
-        if read_en = '1' then                 
-          exe_state <= read_state;
-          next_state <= read_state;
-        else
-          exe_state <= write_state;
-          next_state <= idle_state;          
-        end if;
-      else
-        exe_state <= precharge_state;
-        next_state <= row_act;
-      end if;
-    else
-      exe_state <= row_act;
-      if read_en = '1' then
-        next_state <= read_state;
-      else
-        next_state <= write_state;
-      end if;
-    end if;
-  else
-    exe_state <= idle_state;
-    next_state <= idle_state;
-  end if;
-end procedure next_instruction;
 
   
 end funcs_sdram;  
