@@ -33,7 +33,7 @@ package sdram_params is
   --------------INITIALIZE----------------------------
   constant t_WAIT_INIT : integer := 200000; -- 200Mhz cycles to achieve 100 us
   constant t_EXTRA_INIT : integer := 100000; -- 50 us extra
-  constant t_SETUP_INIT : integer := 300;
+  constant t_SETUP_INIT : integer := 200;
 
   -----------------EXECUTION-------------------------
   constant output_sequence : vec12 := "011111111000"; --read output

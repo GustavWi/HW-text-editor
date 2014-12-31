@@ -36,8 +36,10 @@ entity sdram_controller is
 end sdram_controller;
 
 architecture RTL of sdram_controller is
-
-  signal timer_init  : integer range 0 to t_WAIT_INIT + t_EXTRA_INIT + t_SETUP_INIT + 10:= 0;
+  
+  signal timer_sleep : integer range 0 to t_WAIT_INIT + t_EXTRA_INIT := t_WAIT_INIT + t_EXTRA_INIT; 
+  signal timer_init  : integer range 0 to 255:= 0;
+  signal SLEEP_DONE : std_logic := '0';
   signal INI_DONE : std_logic := '0';
   signal SET_MODE_INI : std_logic := '0';
   signal PRE_ALL_INI : std_logic := '0';
@@ -473,58 +475,54 @@ architecture RTL of sdram_controller is
     end if;
   end process;
 
-----Initialize-------------------------------------------------------
-  -- process(int_CLK, rst)
-    -- begin
-    -- if rst = '0' then
-      -- timer_sleep <= t_WAIT_INIT + t_EXTRA_INIT;
-      -- sleep_done <= '0';
-    -- elsif rising_edge(int_CLK) then
-      -- if timer_sleep = 0 then
-        -- timer_sleep <= 0;
-        -- sleep_done <= '1';
-      -- else
-        -- timer_sleep <= timer_sleep - 1;
-        -- sleep_done <= '0';
-      -- end if;
-    -- end if;
-  -- end process;
-  
+--Initialize-------------------------------------------------------
   process(int_CLK, rst)
     begin
-    if (rst = '0') then
+    if rst = '0' then
+      timer_sleep <= t_WAIT_INIT + t_EXTRA_INIT;
+      SLEEP_DONE <= '0';
+    elsif rising_edge(int_CLK) then
+      if timer_sleep = 0 then
+        SLEEP_DONE <= '1';
+      else
+        timer_sleep <= timer_sleep - 1;
+      end if;
+    end if;
+  end process;
+  
+  process(int_CLK, rst, SLEEP_DONE)
+    begin
+    if (rst = '0' or SLEEP_DONE = '0') then
       INI_DONE <= '0';
       INI_CMD <= t_NOP;
       SET_MODE_INI <= '0';
       PRE_ALL_INI <= '0';
       timer_init <= 0;
     elsif rising_edge(int_CLK) then
-      if timer_init = t_WAIT_INIT + t_EXTRA_INIT + t_SETUP_INIT then
-        timer_init <= t_WAIT_INIT + t_EXTRA_INIT + t_SETUP_INIT;
+      if timer_init = t_SETUP_INIT then
         INI_DONE <= '1';
       else
         timer_init <= timer_init + 1;
-        INI_DONE <= '0';
       end if;
       case timer_init is
-        when t_WAIT_INIT + t_EXTRA_INIT =>      INI_CMD <= t_PRE;
-        when t_WAIT_INIT + t_EXTRA_INIT + 20 => INI_CMD <= t_REF;
-        when t_WAIT_INIT + t_EXTRA_INIT + 40 => INI_CMD <= t_REF;
-        when t_WAIT_INIT + t_EXTRA_INIT + 60 => INI_CMD <= t_REF;
-        when t_WAIT_INIT + t_EXTRA_INIT + 80 => INI_CMD <= t_REF;
-        when t_WAIT_INIT + t_EXTRA_INIT + 100 =>INI_CMD <= t_REF;
-        when t_WAIT_INIT + t_EXTRA_INIT + 120 =>INI_CMD <= t_REF;
-        when t_WAIT_INIT + t_EXTRA_INIT + 140 =>INI_CMD <= t_REF;
-        when t_WAIT_INIT + t_EXTRA_INIT + 160 =>INI_CMD <= t_REF;
-        when t_WAIT_INIT + t_EXTRA_INIT + 180 =>INI_CMD <= t_MRS;
-        when others =>                          INI_CMD <= t_NOP;
+        when 1   =>   INI_CMD <= t_PRE;
+        when 20  =>   INI_CMD <= t_REF;
+        when 40  =>   INI_CMD <= t_REF;
+        when 60  =>   INI_CMD <= t_REF;
+        when 80  =>   INI_CMD <= t_REF;
+        when 100 =>   INI_CMD <= t_REF;
+        when 120 =>   INI_CMD <= t_REF;
+        when 140 =>   INI_CMD <= t_REF;
+        when 160 =>   INI_CMD <= t_REF;
+        when 180 =>   INI_CMD <= t_MRS;
+        when others =>INI_CMD <= t_NOP;
       end case;
-      if timer_init = t_WAIT_INIT + t_EXTRA_INIT + 179 then
+      if timer_init = 179 then
         SET_MODE_INI <= '1';
       else
         SET_MODE_INI <= '0';
       end if;
-      if timer_init = t_WAIT_INIT + t_EXTRA_INIT - 1 then
+      if timer_init = 0 then
         PRE_ALL_INI <= '1';
       else
         PRE_ALL_INI <= '0';
