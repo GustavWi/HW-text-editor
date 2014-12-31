@@ -36,7 +36,8 @@ package sdram_params is
   constant t_SETUP_INIT : integer := 300;
 
   -----------------EXECUTION-------------------------
-  constant output_sequence : vec12 := "001111111100"; --read output
+  constant output_sequence : vec12 := "011111111000"; --read output
+  constant dqm_sequence : vec8 :="01111111";--dqm output of read cmd
   constant refresh_intervall : integer := 1500; --(64ms/200Mhz)*8192    
   ----------------------------------------------------
   ----------------Execution states-------------------
@@ -49,8 +50,9 @@ package sdram_params is
   constant read_state : integer := 6;
   constant write_state : integer := 7;
   constant cmd_delay_state : integer := 8;
-  constant cas_delay_state : integer := 9;
-  constant EXE_STATES_MAX : integer := 9;
+  constant setup_state : integer := 9;
+  constant setup2_state : integer := 10;
+  constant EXE_STATES_MAX : integer := 10;
 --------------------------------------------------------------------------------------  
   constant full_page : vec3 := "011"; -- 8 burst length bit M0-M2
   constant sequential : std_logic := '0'; --sequential bit M3;
@@ -65,11 +67,11 @@ package sdram_params is
   --------------------200 Mhz------------------------
   ----------Internal control variables--------------
   --------------------Cycles-------------------------
-  constant CAS_LATENCY : vec10 := "0000000111"; --0111
-  constant PRECHARGE_LATENCY : vec10 := "0000000111";
-  constant SET_MODE_DELAY : vec10 := "0000000111";
-  constant AUTO_REFRESH_DELAY : vec10 := "1111111111";
-  constant ACT_LATENCY : vec10 := "0000000111"; --0111
-  constant NUM_OF_READS : vec10 := "0011111111";
-  
+  constant CAS_LATENCY : vec11 := "00000000111"; --0111
+  constant PRECHARGE_LATENCY : vec11 := "00000000111";
+  constant SET_MODE_DELAY : vec11 := "00000000111";
+  constant AUTO_REFRESH_DELAY : vec11 := "01111111111";
+  constant ACT_LATENCY : vec11 := "00000000111"; --0111
+  constant NUM_OF_READS : vec11 := "00011111111";
+  constant READ_DELAY : vec11 := "11111111111";
 end sdram_params;
